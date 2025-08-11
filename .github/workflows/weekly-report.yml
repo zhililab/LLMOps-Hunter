@@ -1,0 +1,47 @@
+name: weekly-report
+
+on:
+  schedule:
+    - cron: '0 13 * * 6'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Run LLMOps report generation
+        run: python code/llmops_trend_demo.py
+      - name: Commit reports
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "chore: weekly report update [skip ci]"
+            git push
+          fi
+      - name: Send email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: Weekly LLMOps Report
+          body: |
+            Hello Walker,
+
+            The weekly LLMOps report has been generated and committed to your GitHub repository.
+
+            Best regards,
+            LLMOps bot
+          to: lz123321@live.com
+          from: ${{ secrets.EMAIL_FROM }}
+          secure: true
+          attachments: reports/*.md
